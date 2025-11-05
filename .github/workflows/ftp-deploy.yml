@@ -26,6 +26,9 @@ jobs:
         username: ${{ secrets.FTP_USERNAME }}
         password: ${{ secrets.FTP_PASSWORD }}
         server-dir: /path/to/your/website/  # Update this to your server directory
+        protocol: ftps  # Force FTPS (FTP over SSL/TLS)
+        secure: true    # Explicitly enable secure connection
+        secure-options: --ftp-ssl  # Additional SSL options
         exclude: |
           **/.git*
           **/.git*/**
