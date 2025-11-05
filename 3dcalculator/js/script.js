@@ -847,7 +847,7 @@ function calculateCosts(e) {
 }
 
 // Update the cost allocation chart
-function updateCostAllocationChart(materialCost = 0, electricityCost = 0, laborCost = 0, packagingCost = 0, shippingCost = 0) {
+function updateCostAllocationChart(materialCost = 0, electricityCost = 0, laborCost = 0, packagingCost = 0, shippingCost = 0, marginPercent = 0) {
     console.log('Updating cost allocation chart with:', { materialCost, electricityCost, laborCost, packagingCost, shippingCost });
     const canvas = document.getElementById('costAllocationChart');
     if (!canvas) {
@@ -877,22 +877,25 @@ function updateCostAllocationChart(materialCost = 0, electricityCost = 0, laborC
     // Calculate base cost (sum of material, electricity, labor, packaging, and shipping costs)
     const baseCost = materialCost + electricityCost + laborCost + packagingCost + shippingCost;
     
-    // Get the selected pricing option
-    const selectedOption = document.querySelector('input[name="pricingOption"]:checked');
-    let marginPercent = 0;
-    
-    if (selectedOption) {
-        switch(selectedOption.value) {
-            case 'competitive': marginPercent = 25; break;
-            case 'standard': marginPercent = 40; break;
-            case 'premium': marginPercent = 60; break;
-            case 'luxury': marginPercent = 80; break;
-            case 'custom':
-                const customMargin = document.getElementById('custom-margin');
-                marginPercent = customMargin ? parseInt(customMargin.value) || 25 : 25;
-                break;
+    // If marginPercent is not provided, get it from the selected pricing option
+    if (marginPercent === undefined || marginPercent === null) {
+        const selectedOption = document.querySelector('input[name="pricingOption"]:checked');
+        if (selectedOption) {
+            switch(selectedOption.value) {
+                case 'competitive': marginPercent = 25; break;
+                case 'standard': marginPercent = 40; break;
+                case 'premium': marginPercent = 60; break;
+                case 'luxury': marginPercent = 80; break;
+                case 'custom':
+                    const customMargin = document.getElementById('custom-margin');
+                    marginPercent = customMargin ? parseInt(customMargin.value) || 25 : 25;
+                    break;
+            }
         }
     }
+    
+    // Ensure marginPercent is a number
+    marginPercent = parseFloat(marginPercent) || 0;
     
     // Calculate margin amount and total with margin
     const marginAmount = baseCost * (marginPercent / 100);
@@ -947,14 +950,16 @@ function updateCostAllocationChart(materialCost = 0, electricityCost = 0, laborC
         }]
     };
 
-    // Chart configuration
+    // Material Design Donut Chart Configuration
     const config = {
         type: 'doughnut',
         data: chartData,
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            cutout: '70%', // Adjust donut thickness to cover 70% of the box
+            cutout: '70%',
+            radius: '100%',
+            spacing: 0,
             plugins: {
                 legend: {
                     position: 'bottom',
@@ -962,15 +967,39 @@ function updateCostAllocationChart(materialCost = 0, electricityCost = 0, laborC
                         padding: 15,
                         usePointStyle: true,
                         pointStyle: 'circle',
+                        boxWidth: 8,
+                        boxHeight: 8,
                         font: {
-                            size: 11
+                            size: 12,
+                            family: 'Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                            color: '#5f6368'
                         }
+                    },
+                    onClick: function(e, legendItem, legend) {
+                        const index = legendItem.datasetIndex;
+                        const ci = legend.chart;
+                        const meta = ci.getDatasetMeta(index);
+                        meta.hidden = meta.hidden === null ? !ci.data.datasets[index].hidden : null;
+                        ci.update();
                     }
                 },
                 tooltip: {
+                    backgroundColor: 'rgba(97, 97, 97, 0.9)',
+                    titleFont: {
+                        size: 12,
+                        weight: '500',
+                        family: 'Roboto, -apple-system, sans-serif'
+                    },
+                    bodyFont: {
+                        size: 12,
+                        family: 'Roboto, -apple-system, sans-serif'
+                    },
+                    padding: 10,
+                    cornerRadius: 4,
+                    displayColors: true,
                     callbacks: {
                         label: function(context) {
-                            const label = context.label || '';
+                            const label = context.label.split(' (')[0] || '';
                             const value = context.raw || 0;
                             const total = context.dataset.data.reduce((a, b) => a + b, 0);
                             const percentage = Math.round((value / total) * 100);
@@ -978,58 +1007,65 @@ function updateCostAllocationChart(materialCost = 0, electricityCost = 0, laborC
                         }
                     }
                 },
-                // Remove the title plugin to eliminate the top label
-                title: false
+                // Disable default legend title
+                legend: false
             },
             elements: {
                 arc: {
-                    borderWidth: 0
+                    borderWidth: 0,
+                    borderJoinStyle: 'round',
+                    spacing: 0
                 }
             },
-            // Add padding to make the chart larger within its container
             layout: {
-                padding: 10
+                padding: 5
+            },
+            animation: {
+                animateScale: true,
+                animateRotate: true
             }
         },
         plugins: [{
             id: 'centerText',
             beforeDraw: function(chart) {
-                const width = chart.width,
-                    height = chart.height,
-                    ctx = chart.ctx;
-
-                ctx.restore();
-
-                // Draw total amount perfectly centered in the donut
-                const fontSize = Math.min(width, height) / 10; // Slightly smaller font size
-                ctx.font = `bold ${fontSize}px Inter, system-ui, -apple-system, sans-serif`;
-                ctx.textBaseline = 'middle'; // Center text vertically
+                const {width, height, ctx} = chart;
+                const centerX = width / 2;
+                const centerY = height / 2;
+                
+                // Save the current context state
+                ctx.save();
+                
+                // Set text styles for the total amount
+                const amountText = formatCurrency(totalWithMargin);
+                const amountFontSize = Math.min(width, height) / 7.5; // Reduced from /6 to /7.5 for smaller text
+                
+                // Draw total amount (larger text)
+                ctx.font = `500 ${amountFontSize}px 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
                 ctx.textAlign = 'center';
-
-                // Main total amount
-                const text = formatCurrency(totalWithMargin);
-                const textX = width / 2;
-                const textY = height / 2; // Center vertically
-
-                // Add subtle text shadow for better readability
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = '#202124';
+                
+                // Draw text with shadow for depth
                 ctx.shadowColor = 'rgba(0, 0, 0, 0.1)';
-                ctx.shadowBlur = 3;
-                ctx.shadowOffsetX = 1;
+                ctx.shadowBlur = 2;
+                ctx.shadowOffsetX = 0;
                 ctx.shadowOffsetY = 1;
                 
-                // Draw the main amount
-                ctx.fillStyle = '#1f2937';
-                ctx.fillText(text, textX, textY);
+                // Draw the amount text
+                ctx.fillText(amountText, centerX, centerY - 10);
                 
-                // Reset shadow
+                // Reset shadow for the label
                 ctx.shadowColor = 'transparent';
                 
-                // Remove the "TOTAL" label as requested
-                // ctx.font = `500 ${fontSize * 0.3}px Inter, system-ui, -apple-system, sans-serif`;
-                // ctx.fillStyle = '#6b7280';
-                // ctx.fillText('TOTAL', textX, textY + (fontSize * 0.8));
-
-                ctx.save();
+                // Draw "TOTAL" label (smaller text)
+                const labelText = 'TOTAL';
+                const labelFontSize = Math.min(width, height) / 16;
+                ctx.font = `400 ${labelFontSize}px 'Roboto', -apple-system, sans-serif`;
+                ctx.fillStyle = '#5f6368';
+                ctx.fillText(labelText, centerX, centerY + amountFontSize / 2);
+                
+                // Restore the context state
+                ctx.restore();
             }
         }]
     };
@@ -1091,28 +1127,57 @@ function updateTotalCost() {
     const baseCostEl = document.getElementById('base-cost');
     if (!baseCostEl) return;
     
-    const baseCost = parseFloat(baseCostEl.textContent.replace('€', '')) || 0;
+    const baseCost = parseFloat(baseCostEl.textContent.replace(/[^0-9.,]/g, '').replace(',', '.')) || 0;
     const selectedOption = document.querySelector('input[name="pricingOption"]:checked');
     
     if (!selectedOption) return;
     
     let total = 0;
+    let marginPercent = 0;
     const optionId = selectedOption.id.replace('pricing-', '');
     
     if (optionId === 'custom') {
-        const customMargin = parseFloat(document.getElementById('custom-margin')?.value) || 0;
-        total = baseCost * (1 + (customMargin / 100));
+        marginPercent = parseFloat(document.getElementById('custom-margin')?.value) || 0;
+        total = baseCost * (1 + (marginPercent / 100));
     } else {
-        const priceElement = document.getElementById(`${optionId}-price`);
-        if (priceElement) {
-            total = parseFloat(priceElement.textContent.replace('€', '')) || 0;
-        }
+        // Map option IDs to their corresponding margin percentages
+        const marginPercentages = {
+            'competitive': 25,
+            'standard': 40,
+            'premium': 60,
+            'luxury': 80
+        };
+        marginPercent = marginPercentages[optionId] || 0;
+        total = baseCost * (1 + (marginPercent / 100));
     }
     
+    // Update the total cost display
     const totalCostElement = document.getElementById('total-cost');
     if (totalCostElement) {
         totalCostElement.textContent = `€${total.toFixed(2)}`;
     }
+    
+    // Get current costs from the results display
+    const getCost = (id) => {
+        const el = document.getElementById(id);
+        return el ? parseFloat(el.textContent.replace(/[^0-9.,]/g, '').replace(',', '.')) || 0 : 0;
+    };
+    
+    const materialCost = getCost('material-cost');
+    const electricityCost = getCost('electricity-cost-result');
+    const laborCost = getCost('labor-cost-result');
+    const packagingCost = getCost('packaging-cost-result');
+    const shippingCost = getCost('shipping-cost-result');
+    
+    // Update the chart with the new margin
+    updateCostAllocationChart(
+        materialCost,
+        electricityCost,
+        laborCost,
+        packagingCost,
+        shippingCost,
+        marginPercent
+    );
 }
 
 // Update the results in the UI
