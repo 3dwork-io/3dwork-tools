@@ -1,39 +1,73 @@
-// Make key functions available globally
+// Global variables will be initialized in initApp
+
+// Initialize the app when the DOM is loaded
 window.initApp = function() {
-    // Initialize DOM references
-    let form, materialsContainer, addMaterialBtn, resetBtn, calculateBtn, languageToggle, unitToggle, printerSelect, printerPowerInput, printTimeInput, quantityInput, failureRateInput, electricityCostInput, laborRateInput, laborHoursInput, packagingCostInput, shippingCostInput, exportPdfBtn;
-
-    // Initialize DOM references
-    form = document.getElementById('calculator-form');
-    materialsContainer = document.getElementById('materials-container');
-    addMaterialBtn = document.getElementById('add-material');
-    resetBtn = document.getElementById('reset-btn');
-    calculateBtn = document.getElementById('calculate-btn');
-    languageToggle = document.getElementById('language-toggle');
-    unitToggle = document.getElementById('unit-toggle');
-    printerSelect = document.getElementById('printer-select');
-    printerPowerInput = document.getElementById('printer-power');
-    printTimeInput = document.getElementById('print-time');
-    quantityInput = document.getElementById('quantity');
-    failureRateInput = document.getElementById('failure-rate');
-    electricityCostInput = document.getElementById('electricity-cost');
-    laborRateInput = document.getElementById('labor-rate');
-    laborHoursInput = document.getElementById('labor-hours');
-    packagingCostInput = document.getElementById('packaging-cost');
-    shippingCostInput = document.getElementById('shipping-cost');
-    exportPdfBtn = document.getElementById('export-pdf');
-
-    // Initialize event listeners
-    setupEventListeners();
+    console.log('App initialized');
     
-    // Set default values
-    if (printerSelect && !printerSelect.value) {
-        printerSelect.value = 'fdm_generic';
+    try {
+        // Initialize DOM elements
+        const form = document.getElementById('calculator-form');
+        const materialsContainer = document.getElementById('materials-container');
+        const addMaterialBtn = document.getElementById('add-material');
+        const resetBtn = document.getElementById('reset-btn');
+        const calculateBtn = document.getElementById('calculate-btn');
+        const exportPdfBtn = document.getElementById('export-pdf-btn');
+        const languageToggle = document.getElementById('language-toggle');
+        const unitToggle = document.getElementById('unit-toggle');
+        const printerSelect = document.getElementById('printer-select');
+        const printerPowerInput = document.getElementById('printer-power');
+        const printTimeInput = document.getElementById('print-time');
+        const quantityInput = document.getElementById('quantity');
+        const failureRateInput = document.getElementById('failure-rate');
+        const electricityCostInput = document.getElementById('electricity-cost');
+        const laborRateInput = document.getElementById('labor-rate');
+        const laborHoursInput = document.getElementById('labor-hours');
+        const packagingCostInput = document.getElementById('packaging-cost');
+        const shippingCostInput = document.getElementById('shipping-cost');
+        const totalCostEl = document.getElementById('total-cost');
+
+        // Assign to window object to make them globally available
+        window.form = form;
+        window.materialsContainer = materialsContainer;
+        window.addMaterialBtn = addMaterialBtn;
+        window.resetBtn = resetBtn;
+        window.calculateBtn = calculateBtn;
+        window.exportPdfBtn = exportPdfBtn;
+        window.languageToggle = languageToggle;
+        window.unitToggle = unitToggle;
+        window.printerSelect = printerSelect;
+        window.printerPowerInput = printerPowerInput;
+        window.printTimeInput = printTimeInput;
+        window.quantityInput = quantityInput;
+        window.failureRateInput = failureRateInput;
+        window.electricityCostInput = electricityCostInput;
+        window.laborRateInput = laborRateInput;
+        window.laborHoursInput = laborHoursInput;
+        window.packagingCostInput = packagingCostInput;
+        window.shippingCostInput = shippingCostInput;
+        window.totalCostEl = totalCostEl;
+        
+        // Set up event listeners
+        if (typeof setupEventListeners === 'function') {
+            setupEventListeners();
+        }
+        
+        // Set default values
+        if (printerSelect && !printerSelect.value) {
+            printerSelect.value = 'fdm_generic';
+        }
+        
+        // Initial update and calculation
+        if (typeof updatePrinterDetails === 'function') {
+            updatePrinterDetails();
+        }
+        
+        if (typeof calculateCosts === 'function') {
+            calculateCosts();
+        }
+    } catch (error) {
+        console.error('Error initializing app:', error);
     }
-    
-    // Initial update and calculation
-    updatePrinterDetails();
-    calculateCosts();
 };
 
 // Utility Functions
@@ -74,6 +108,327 @@ const laborCostResultEl = document.getElementById('labor-cost-result');
 const packagingCostResultEl = document.getElementById('packaging-cost-result');
 const shippingCostResultEl = document.getElementById('shipping-cost-result');
 const totalCostEl = document.getElementById('total-cost');
+
+// Update total cost based on selected pricing option
+function updateTotalCost() {
+    try {
+        // Get all individual costs
+        const getCost = (id) => {
+            const el = document.getElementById(id);
+            return el ? parseFloat(el.textContent.replace(/[^0-9.,]/g, '').replace(',', '.')) || 0 : 0;
+        };
+        
+        // Get individual costs
+        const materialCost = getCost('material-cost');
+        const electricityCost = getCost('electricity-cost-result');
+        const laborCost = getCost('labor-cost-result');
+        const packagingCost = getCost('packaging-cost-result');
+        const shippingCost = getCost('shipping-cost-result');
+        
+        // Calculate base cost as sum of all individual costs
+        const baseCost = materialCost + electricityCost + laborCost + packagingCost + shippingCost;
+        
+        // Update the base cost display
+        const baseCostEl = document.getElementById('base-cost');
+        if (baseCostEl) {
+            baseCostEl.textContent = `€${baseCost.toFixed(2)}`;
+        }
+        
+        // Get selected pricing option
+        const selectedOption = document.querySelector('input[name="pricingOption"]:checked');
+        if (!selectedOption) return;
+        
+        let total = 0;
+        let marginPercent = 0;
+        const optionId = selectedOption.id.replace('pricing-', '');
+        
+        // Calculate margin based on selected option
+        if (optionId === 'custom') {
+            const customMarginInput = document.getElementById('custom-margin');
+            marginPercent = customMarginInput ? parseFloat(customMarginInput.value) || 0 : 0;
+        } else {
+            // Map option IDs to their corresponding margin percentages
+            const marginPercentages = {
+                'competitive': 10,  // 10%
+                'standard': 15,     // 15%
+                'urgent': 25,       // 25%
+                'crazy': 50         // 50%
+            };
+            marginPercent = marginPercentages[optionId] || 0;
+        }
+        
+        // Calculate total with margin
+        total = baseCost * (1 + (marginPercent / 100));
+        
+        // Update the total cost display
+        const totalCostElement = document.getElementById('total-cost');
+        if (totalCostElement) {
+            totalCostElement.textContent = `€${total.toFixed(2)}`;
+            
+            // Update the margin percentage display if it exists
+            const marginDisplay = document.getElementById('margin-percentage');
+            if (marginDisplay) {
+                marginDisplay.textContent = `${marginPercent}%`;
+            }
+        }
+        
+        // Update the chart with the new margin
+        updateCostAllocationChart(
+            materialCost,
+            electricityCost,
+            laborCost,
+            packagingCost,
+            shippingCost,
+            marginPercent
+        );
+        
+    } catch (error) {
+        console.error('Error in updateTotalCost:', error);
+    }
+}
+
+// Export results as PDF
+async function exportToPdf() {
+    const exportPdfBtn = document.getElementById('export-pdf-btn');
+    const originalText = exportPdfBtn ? exportPdfBtn.innerHTML : '';
+    let container = null;
+    
+    try {
+        if (exportPdfBtn) {
+            exportPdfBtn.disabled = true;
+            exportPdfBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Generating...';
+        }
+
+        // Get all the necessary elements
+        const resultsCard = document.getElementById('results-card');
+        const printerSelect = document.getElementById('printer-select');
+        const printerName = printerSelect ? printerSelect.options[printerSelect.selectedIndex].text : 'Not specified';
+        const printTimeValue = document.getElementById('print-time')?.value || '0';
+        const quantityValue = document.getElementById('quantity')?.value || '1';
+        
+        if (!resultsCard) {
+            throw new Error('Could not find results card. Please calculate costs first.');
+        }
+
+        // Get PDF settings
+        const companyName = document.getElementById('company-name') ? document.getElementById('company-name').value : '3Dwork';
+        const companyEmail = document.getElementById('company-email') ? document.getElementById('company-email').value : 'info@3dwork.io';
+        const companyWebsite = document.getElementById('company-website') ? document.getElementById('company-website').value : 'https://3dwork.io';
+        
+        // Get the selected pricing option with margin
+        const selectedPricing = document.querySelector('input[name="pricingOption"]:checked');
+        let pricingMultiplier = 1.0;
+        
+        // Get the actual multiplier from the selected pricing option
+        if (selectedPricing) {
+            const priceElement = selectedPricing.closest('.pricing-option').querySelector('span[id$="-price"]');
+            const basePriceElement = document.getElementById('base-cost');
+            
+            if (priceElement && basePriceElement) {
+                const price = parseFloat(priceElement.textContent.replace(/[^0-9.,]/g, '').replace(',', '.'));
+                const basePrice = parseFloat(basePriceElement.textContent.replace(/[^0-9.,]/g, '').replace(',', '.'));
+                
+                if (basePrice > 0) {
+                    pricingMultiplier = price / basePrice;
+                }
+            }
+        }
+        
+        // First, ensure all calculations are up to date
+        calculateCosts();
+        
+        // Get the current cost values from the form
+        const getFormCost = (id) => {
+            const element = document.getElementById(id);
+            if (!element) return 0;
+            return parseFloat(element.value) || 0;
+        };
+
+        // Get the current values from the form
+        const printTimeHours = parseFloat(printTimeValue) || 0;
+        const laborRate = parseFloat(document.getElementById('labor-rate')?.value) || 0;
+        const electricityRate = parseFloat(document.getElementById('electricity-rate')?.value) || 0;
+        const printerPower = parseFloat(document.querySelector('.printer-power')?.value) || 0;
+        const quantity = parseInt(quantityValue) || 1;
+        const failureRate = parseFloat(document.getElementById('failure-rate')?.value) || 0;
+        const failureMultiplier = 1 + (failureRate / 100);
+
+        // Calculate costs directly to ensure accuracy
+        const materialCost = Array.from(document.querySelectorAll('.material-row')).reduce((total, row) => {
+            const weight = parseFloat(row.querySelector('.material-weight')?.value) || 0;
+            const costPerKg = parseFloat(row.querySelector('.material-cost')?.value) || 0;
+            return total + ((weight / 1000) * costPerKg);
+        }, 0) * failureMultiplier;
+
+        const electricityCost = (printerPower * printTimeHours * electricityRate / 1000) * failureMultiplier;
+        const laborCost = (printTimeHours * laborRate) * failureMultiplier;
+        const packagingCost = parseFloat(document.getElementById('packaging-cost')?.value) || 0;
+        const shippingCost = parseFloat(document.getElementById('shipping-cost')?.value) || 0;
+
+        // Calculate base cost and total with margin
+        const baseCost = materialCost + electricityCost + laborCost + packagingCost + shippingCost;
+        const totalCost = baseCost * pricingMultiplier;
+        const marginAmount = totalCost - baseCost;
+        const marginPercentage = (pricingMultiplier - 1) * 100;
+        
+        // Format currency with proper decimal and thousand separators
+        const formatCurrency = (amount) => {
+            if (typeof amount !== 'number' || isNaN(amount)) {
+                console.warn('Invalid amount for formatting:', amount);
+                return '€0,00';
+            }
+            return '€' + amount.toFixed(2).replace(/\./g, '|')
+                                   .replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+                                   .replace(/\|/g, ',');
+        };
+        
+        // Create a temporary container for the PDF content
+        const container = document.createElement('div');
+        container.style.width = '800px';
+        container.style.padding = '40px';
+        container.style.backgroundColor = '#ffffff';
+        document.body.appendChild(container);
+
+        // Get current date
+        const now = new Date();
+        const formattedDate = now.toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        });
+
+        try {
+            // Initialize PDF
+            const pdf = new jspdf.jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: 'a4',
+                compress: true
+            });
+
+            // Generate professional HTML content for the PDF
+            container.innerHTML = `
+                <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; color: #333; line-height: 1.6;">
+                    <!-- Header -->
+                    <div style="text-align: center; margin-bottom: 30px; border-bottom: 2px solid #4f46e5; padding-bottom: 20px;">
+                        <h1 style="color: #4f46e5; margin-bottom: 5px;">${companyName || '3D Printing Quote'}</h1>
+                        <div style="color: #666; font-size: 0.9em;">
+                            <span>${companyEmail} | ${companyWebsite}</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Quote Details -->
+                    <div style="margin-bottom: 30px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                            <div>
+                                <h3 style="color: #4f46e5; margin-bottom: 5px;">Quote #${currentEstimateNumber || '0001'}</h3>
+                                <p style="margin: 0; color: #666;">Date: ${formattedDate}</p>
+                            </div>
+                            <div style="text-align: right;">
+                                <p style="margin: 0; color: #666;">Printer: ${printerName}</p>
+                                <p style="margin: 0; color: #666;">Quantity: ${quantity} unit(s)</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Cost Breakdown -->
+                    <div style="margin-bottom: 30px;">
+                        <h3 style="color: #4f46e5; border-bottom: 1px solid #eee; padding-bottom: 5px; margin-bottom: 15px;">Cost Breakdown</h3>
+                        <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px;">
+                            <tr>
+                                <td style="padding: 8px 0; border-bottom: 1px solid #eee;">Material Cost:</td>
+                                <td style="text-align: right; padding: 8px 0; border-bottom: 1px solid #eee;">${formatCurrency(materialCost)}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px 0; border-bottom: 1px solid #eee;">Electricity Cost (${printTimeHours}h @ ${printerPower}W):</td>
+                                <td style="text-align: right; padding: 8px 0; border-bottom: 1px solid #eee;">${formatCurrency(electricityCost)}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px 0; border-bottom: 1px solid #eee;">Labor Cost (${printTimeHours}h @ ${formatCurrency(laborRate)}/h):</td>
+                                <td style="text-align: right; padding: 8px 0; border-bottom: 1px solid #eee;">${formatCurrency(laborCost)}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px 0; border-bottom: 1px solid #eee;">Packaging Cost:</td>
+                                <td style="text-align: right; padding: 8px 0; border-bottom: 1px solid #eee;">${formatCurrency(packagingCost)}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px 0; border-bottom: 1px solid #eee;">Shipping Cost:</td>
+                                <td style="text-align: right; padding: 8px 0; border-bottom: 1px solid #eee;">${formatCurrency(shippingCost)}</td>
+                            </tr>
+                            <tr style="font-weight: bold;">
+                                <td style="padding: 12px 0; border-bottom: 2px solid #4f46e5;">Subtotal:</td>
+                                <td style="text-align: right; padding: 12px 0; border-bottom: 2px solid #4f46e5;">${formatCurrency(baseCost)}</td>
+                            </tr>
+                            ${marginPercentage > 0 ? `
+                            <tr>
+                                <td style="padding: 8px 0; color: #666;">Margin (${marginPercentage.toFixed(0)}%):</td>
+                                <td style="text-align: right; padding: 8px 0; color: #666;">+${formatCurrency(marginAmount)}</td>
+                            </tr>
+                            ` : ''}
+                            <tr style="font-weight: bold; font-size: 1.2em;">
+                                <td style="padding: 12px 0; border-top: 2px solid #4f46e5;">Total Cost:</td>
+                                <td style="text-align: right; padding: 12px 0; border-top: 2px solid #4f46e5;">${formatCurrency(totalCost)}</td>
+                            </tr>
+                        </table>
+                        ${failureRate > 0 ? `
+                        <p style="font-size: 0.9em; color: #666; font-style: italic; margin-top: 5px;">
+                            * Includes ${failureRate}% failure rate adjustment
+                        </p>
+                        ` : ''}
+                    </div>
+                    
+                    <!-- Footer -->
+                    <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; text-align: center; color: #666; font-size: 0.9em;">
+                        <p>Thank you for your business! This quote is valid for 30 days from the date of issue.</p>
+                        <p>${companyName} | ${companyEmail} | ${companyWebsite}</p>
+                    </div>
+                </div>
+            `;
+
+            // Use html2canvas to capture the content
+            const canvas = await html2canvas(container, {
+                scale: 2,
+                useCORS: true,
+                logging: false,
+                backgroundColor: '#ffffff'
+            });
+
+            // Add the image to the PDF
+            const imgData = canvas.toDataURL('image/png');
+            const pdfWidth = pdf.internal.pageSize.getWidth() - 20; // 10mm margin on each side
+            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+            // Add the image to the PDF
+            pdf.addImage(imgData, 'PNG', 10, 10, pdfWidth, pdfHeight);
+
+            // Save the PDF
+            pdf.save(`3DPrinting_Quote_${currentEstimateNumber || 'quote'}.pdf`);
+
+        } catch (error) {
+            console.error('Error generating PDF:', error);
+            alert('Error generating PDF: ' + error.message);
+        } finally {
+            // Clean up
+            if (container && container.parentNode) {
+                document.body.removeChild(container);
+            }
+            
+            // Re-enable the export button
+            if (exportPdfBtn) {
+                exportPdfBtn.disabled = false;
+                exportPdfBtn.innerHTML = originalText;
+            }
+        }
+    } catch (error) {
+        console.error('Error in exportToPdf:', error);
+        alert('Error generating PDF: ' + error.message);
+        
+        if (exportPdfBtn) {
+            exportPdfBtn.disabled = false;
+            exportPdfBtn.innerHTML = originalText;
+        }
+    }
+}
 
 // Setup all event listeners
 function setupEventListeners() {
@@ -205,11 +560,11 @@ const defaultMaterialColors = {
 
 // Material database with cost per kg or liter and default colors
 const materials = {
-    // Generic FDM Materials
-    pla: { name: 'PLA (Generic)', cost: 20, type: 'fdm', color: defaultMaterialColors.pla },
-    petg: { name: 'PETG (Generic)', cost: 25, type: 'fdm', color: defaultMaterialColors.petg },
-    abs: { name: 'ABS (Generic)', cost: 30, type: 'fdm', color: defaultMaterialColors.abs },
-    tpu: { name: 'TPU (Generic)', cost: 40, type: 'fdm', color: defaultMaterialColors.tpu },
+    // Generic FDM Materials with densities (g/cm³)
+    pla: { name: 'PLA (Generic)', cost: 20, type: 'fdm', color: defaultMaterialColors.pla, density: 1.24 },
+    petg: { name: 'PETG (Generic)', cost: 25, type: 'fdm', color: defaultMaterialColors.petg, density: 1.27 },
+    abs: { name: 'ABS (Generic)', cost: 30, type: 'fdm', color: defaultMaterialColors.abs, density: 1.04 },
+    tpu: { name: 'TPU (Generic)', cost: 40, type: 'fdm', color: defaultMaterialColors.tpu, density: 1.21 },
     
     // Rosa3D FDM Filaments
     rosa_pla: { name: 'Rosa3D PLA', cost: 25, type: 'fdm', color: '#4CAF50' },
@@ -383,23 +738,33 @@ function addMaterialRow(materialType = 'PLA') {
             <div class="col-md-3">
                 <label class="form-label small mb-1">Material</label>
                 <select class="form-select form-select-sm material-type">
-                    <option value="PLA" ${materialType === 'PLA' ? 'selected' : ''}>PLA</option>
-                    <option value="ABS" ${materialType === 'ABS' ? 'selected' : ''}>ABS</option>
-                    <option value="PETG" ${materialType === 'PETG' ? 'selected' : ''}>PETG</option>
-                    <option value="TPU" ${materialType === 'TPU' ? 'selected' : ''}>TPU</option>
-                    <option value="Resin" ${materialType === 'Resin' ? 'selected' : ''}>Resin</option>
+                    <!-- Generic Materials -->
+                    <optgroup label="Generic Materials">
+                        ${Object.entries(materials).filter(([_, mat]) => !mat.name.includes('Rosa3D') && !mat.name.includes('Spectrum') && !mat.name.includes('(Generic)')).map(([key, mat]) => 
+                            `<option value="${key}" ${materialType === key ? 'selected' : ''} data-cost="${mat.cost}" data-density="${mat.density || '1.24'}" data-color="${mat.color || defaultMaterialColors.default}">${mat.name}</option>`
+                        ).join('')}
+                    </optgroup>
+                    <!-- Rosa3D Filaments -->
+                    <optgroup label="Rosa3D Filaments">
+                        ${Object.entries(materials).filter(([_, mat]) => mat.name.includes('Rosa3D')).map(([key, mat]) => 
+                            `<option value="${key}" ${materialType === key ? 'selected' : ''} data-cost="${mat.cost}" data-density="${mat.density || '1.24'}" data-color="${mat.color || defaultMaterialColors.default}">${mat.name}</option>`
+                        ).join('')}
+                    </optgroup>
+                    <!-- Spectrum Filaments -->
+                    <optgroup label="Spectrum Filaments">
+                        ${Object.entries(materials).filter(([_, mat]) => mat.name.includes('Spectrum')).map(([key, mat]) => 
+                            `<option value="${key}" ${materialType === key ? 'selected' : ''} data-cost="${mat.cost}" data-density="${mat.density || '1.24'}" data-color="${mat.color || defaultMaterialColors.default}">${mat.name}</option>`
+                        ).join('')}
+                    </optgroup>
                 </select>
             </div>
-            <div class="col-md-2">
+            <div class="col-md-1">
                 <label class="form-label small mb-1">Color</label>
-                <div class="input-group input-group-sm">
-                    <input type="color" class="form-control form-control-color color-picker p-0" value="${defaultMat.color}" style="height: 31px">
-                    <span class="input-group-text color-preview" style="background-color: ${defaultMat.color}"></span>
-                </div>
+                <input type="color" class="form-control form-control-color color-picker p-0 w-100" value="${defaultMat.color}" style="height: 31px">
             </div>
             <div class="col-md-2">
                 <label class="form-label small mb-1">Weight (g)</label>
-                <input type="number" class="form-control form-control-sm material-weight" value="0" step="0.1" min="0">
+                <input type="number" class="form-control form-control-sm material-weight" value="100" step="0.1" min="0">
             </div>
             <div class="col-md-2">
                 <label class="form-label small mb-1">Cost (€/kg)</label>
@@ -408,6 +773,17 @@ function addMaterialRow(materialType = 'PLA') {
             <div class="col-md-2">
                 <label class="form-label small mb-1">Density (g/cm³)</label>
                 <input type="number" class="form-control form-control-sm material-density" value="${defaultMat.density}" step="0.01" min="0.1">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small mb-1">Calculation</label>
+                <select class="form-select form-select-sm material-calculation-type">
+                    <option value="total">Total Material</option>
+                    <option value="per-piece">Per Piece</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small mb-1">Total (g)</label>
+                <div class="form-control form-control-sm bg-light material-total-weight text-center">0.0</div>
             </div>
             <div class="col-md-1">
                 <button type="button" class="btn btn-sm btn-outline-danger w-100 remove-material" ${materialCount === 1 ? 'disabled' : ''}>
@@ -423,21 +799,57 @@ function addMaterialRow(materialType = 'PLA') {
     const colorPicker = materialRow.querySelector('.color-picker');
     const colorPreview = materialRow.querySelector('.color-preview');
     
-    colorPicker.addEventListener('input', (e) => {
-        colorPreview.style.backgroundColor = e.target.value;
-        calculateCosts();
-    });
+    if (colorPicker && colorPreview) {
+        colorPicker.addEventListener('input', (e) => {
+            colorPreview.style.backgroundColor = e.target.value;
+            calculateCosts();
+        });
+    }
     
+    // Trigger initial calculation
+    calculateCosts();
+    
+    // Add event listeners for all inputs and selects
     materialRow.querySelectorAll('input, select').forEach(input => {
         input.addEventListener('input', calculateCosts);
     });
     
+    // Add event listener for the remove button
     materialRow.querySelector('.remove-material').addEventListener('click', () => {
         if (document.querySelectorAll('.material-row').length > 1) {
             materialRow.remove();
             calculateCosts();
         }
     });
+    
+    // Add change event for material type to update default values
+    const materialTypeSelect = materialRow.querySelector('.material-type');
+    const colorInput = materialRow.querySelector('.color-picker');
+    const costInput = materialRow.querySelector('.material-cost');
+    const densityInput = materialRow.querySelector('.material-density');
+    
+    if (materialTypeSelect) {
+        materialTypeSelect.addEventListener('change', (e) => {
+            const selectedOption = e.target.options[e.target.selectedIndex];
+            const cost = selectedOption.getAttribute('data-cost');
+            const density = selectedOption.getAttribute('data-density');
+            const color = selectedOption.getAttribute('data-color');
+            
+            if (colorInput) {
+                colorInput.value = color || defaultMaterialColors.default;
+            }
+            if (costInput) {
+                costInput.value = cost || '0';
+                costInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            if (densityInput) {
+                densityInput.value = density || '1.24';
+                densityInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            
+            calculateCosts();
+        });
+    }
     
     calculateCosts();
     return materialRow;
@@ -744,36 +1156,125 @@ function toggleUnits() {
     toggleUnitSystem();
 }
 
+// Global variable for estimate number
+let currentEstimateNumber = '';
+
 // Calculate all costs
 function calculateCosts(e) {
     if (e) e.preventDefault();
     
     try {
-        console.log('Calculating costs...');
+        // Get values from form inputs with null checks
+        const getElementValue = (id, defaultValue = 0) => {
+            const el = document.getElementById(id);
+            return el && !isNaN(parseFloat(el.value)) ? parseFloat(el.value) : defaultValue;
+        };
+
+        const now = new Date();
+        // Format: YYYYMMDDHHMMSS
+        currentEstimateNumber = `${now.getFullYear()}` +
+            `${String(now.getMonth() + 1).padStart(2, '0')}` +
+            `${String(now.getDate()).padStart(2, '0')}` +
+            `${String(now.getHours()).padStart(2, '0')}` +
+            `${String(now.getMinutes()).padStart(2, '0')}` +
+            `${String(now.getSeconds()).padStart(2, '0')}`;
+            
+        const printTimeHours = getElementValue('print-time', 0);
+        const laborRate = getElementValue('labor-rate', 15); // Default €15/hour
+        const laborHours = getElementValue('labor-hours', 0);
+        const packagingCost = getElementValue('packaging-cost', 0);
+        const shippingCost = getElementValue('shipping-cost', 0);
+        const electricityRate = getElementValue('electricity-cost', 0.2); // Default €0.20/kWh
+        const failureRate = getElementValue('failure-rate', 0); // Default 0% failure rate
+        const quantityEl = document.getElementById('quantity');
+        const quantity = quantityEl ? parseInt(quantityEl.value) || 1 : 1;
         
-        // Get values from form inputs
-        const printTimeHours = parseFloat(document.getElementById('print-time').value) || 0;
-        const quantity = parseInt(document.getElementById('quantity').value) || 1;
-        const failureRate = parseFloat(document.getElementById('failure-rate').value) || 0;
-        const electricityRate = parseFloat(document.getElementById('electricity-cost').value) || 0.2; // Default €0.20/kWh
-        const laborRate = parseFloat(document.getElementById('labor-rate').value) || 15; // Default €15/hour
-        const laborHours = parseFloat(document.getElementById('labor-hours').value) || 0;
-        const packagingCost = parseFloat(document.getElementById('packaging-cost').value) || 0;
-        const packagingCalculationType = document.getElementById('packaging-calculation-type').value;
-        const shippingCost = parseFloat(document.getElementById('shipping-cost').value) || 0;
-        const shippingCalculationType = document.getElementById('shipping-calculation-type').value;
+        // Get select values with null checks
+        const getSelectValue = (id, defaultValue = '') => {
+            const el = document.getElementById(id);
+            return el ? el.value : defaultValue;
+        };
         
-        console.log('Input values:', { printTimeHours, quantity, failureRate, electricityRate, laborRate, laborHours, packagingCost, packagingCalculationType });
+        const packagingCalculationType = getSelectValue('packaging-calculation-type');
+        const shippingCalculationType = getSelectValue('shipping-calculation-type');
         
-        // Calculate material costs from all material rows
+        console.log('Input values:', { 
+            printTimeHours, 
+            quantity, 
+            failureRate, 
+            electricityRate, 
+            laborRate, 
+            laborHours, 
+            packagingCost, 
+            packagingCalculationType,
+            shippingCost,
+            shippingCalculationType
+        });
+        
+        // Calculate material costs and weights from all material rows
         let totalMaterialCost = 0;
+        let totalWeight = 0;
+        
+        // Clear previous total weight display
+        const existingTotalWeight = document.getElementById('total-weight-display');
+        if (existingTotalWeight) {
+            existingTotalWeight.remove();
+        }
+        
         document.querySelectorAll('.material-row').forEach((row, index) => {
             const weight = parseFloat(row.querySelector('.material-weight').value) || 0;
             const costPerKg = parseFloat(row.querySelector('.material-cost').value) || 0;
-            const materialCost = weight * (costPerKg / 1000); // Convert g to kg
+            const calculationType = row.querySelector('.material-calculation-type').value || 'total';
+            
+            // Calculate material cost based on calculation type
+            let materialCost, materialWeight;
+            
+            if (calculationType === 'per-piece') {
+                // For 'per-piece', calculate cost for one piece and multiply by quantity
+                materialCost = (weight * (costPerKg / 1000)) * quantity; // (g * €/kg / 1000) * qty = €
+                materialWeight = weight * quantity;
+            } else {
+                // For 'total', the weight is already the total weight for all pieces
+                materialCost = weight * (costPerKg / 1000); // g * €/kg / 1000 = €
+                materialWeight = weight;
+            }
+            
             totalMaterialCost += materialCost;
-            console.log(`Material ${index + 1}:`, { weight, costPerKg, materialCost });
+            totalWeight += materialWeight;
+            
+            // Update the total weight display next to the calculation type
+            const totalWeightDisplay = row.querySelector('.material-total-weight');
+            if (totalWeightDisplay) {
+                totalWeightDisplay.textContent = materialWeight.toFixed(1);
+            }
+            
+            console.log(`Material ${index + 1}:`, { 
+                weight, 
+                costPerKg, 
+                materialCost,
+                materialWeight,
+                calculationType,
+                quantity,
+                totalMaterialCost
+            });
         });
+        
+        // Add total weight display at the bottom of materials container
+        if (totalWeight > 0) {
+            const materialsContainer = document.getElementById('materials-container');
+            const totalWeightDisplay = document.createElement('div');
+            totalWeightDisplay.id = 'total-weight-display';
+            totalWeightDisplay.className = 'row g-2 align-items-end mt-2';
+            totalWeightDisplay.innerHTML = `
+                <div class="col-md-3">
+                    <label class="form-label small mb-1">Total Weight</label>
+                    <div class="form-control form-control-sm bg-light">${totalWeight.toFixed(1)} g</div>
+                </div>
+            `;
+            
+            // Add the total weight display at the end of the container
+            materialsContainer.appendChild(totalWeightDisplay);
+        }
         
         // Calculate electricity cost
         const printerPower = parseFloat(document.getElementById('printer-power').value) || 0; // in watts
@@ -784,41 +1285,54 @@ function calculateCosts(e) {
         const laborCalculationType = document.getElementById('labor-calculation-type').value;
         let laborCost = laborRate * laborHours;
         
+        // Apply quantity if labor is calculated per piece
         if (laborCalculationType === 'per-piece') {
             laborCost *= quantity;
         }
         
+        // Don't apply failure rate to labor cost by default
+        // If you want to include failure rate, uncomment the next line
+        // laborCost *= failureMultiplier;
+        
         // Calculate packaging and shipping costs based on calculation type
-        let totalPackagingCost = packagingCost;
-        let totalShippingCost = shippingCost;
-        
-        if (packagingCalculationType === 'per-piece') {
-            totalPackagingCost *= quantity;
-        }
-        
-        if (shippingCalculationType === 'per-piece') {
-            totalShippingCost *= quantity;
-        }
+        let totalPackagingCost = packagingCalculationType === 'per-piece' 
+            ? packagingCost * quantity 
+            : packagingCost;
+            
+        let totalShippingCost = shippingCalculationType === 'per-piece'
+            ? shippingCost * quantity
+            : shippingCost;
+            
+        console.log('Packaging and shipping costs:', {
+            packagingCost,
+            totalPackagingCost,
+            packagingCalculationType,
+            shippingCost,
+            totalShippingCost,
+            shippingCalculationType,
+            quantity
+        });
         
         // Calculate failure multiplier (e.g., 5% failure rate = 1.05 multiplier)
         const failureMultiplier = 1 + (failureRate / 100);
         
-        // Calculate total base cost (materials + electricity + labor + packaging + shipping) * failure multiplier
-        const baseCost = (totalMaterialCost + electricityCost + laborCost + totalPackagingCost + totalShippingCost) * failureMultiplier;
+        // Calculate final costs with failure rate applied to material costs
+        const finalMaterialCost = totalMaterialCost * failureMultiplier;
         
-        // Calculate final costs with failure rate and quantity applied
-        const finalMaterialCost = totalMaterialCost * quantity * failureMultiplier;
+        // Calculate total base cost (materials with failure rate + other costs)
+        const baseCost = finalMaterialCost + electricityCost + laborCost + totalPackagingCost + totalShippingCost;
+        
+        // Electricity cost is for the total print time, not per piece
         const finalElectricityCost = electricityCost * failureMultiplier;
+        
+        // Labor cost depends on the calculation type
         const finalLaborCost = laborCalculationType === 'per-piece' 
-            ? laborCost * failureMultiplier 
-            : laborCost;
-        const finalPackagingCost = packagingCalculationType === 'per-piece' 
-            ? totalPackagingCost * quantity * failureMultiplier 
-            : totalPackagingCost * failureMultiplier;
+            ? laborCost * failureMultiplier  // laborCost is already multiplied by quantity in the first calculation
+            : laborCost * failureMultiplier; // Use as is for total hours
             
-        const finalShippingCost = shippingCalculationType === 'per-piece'
-            ? totalShippingCost * quantity * failureMultiplier
-            : totalShippingCost * failureMultiplier;
+        // Packaging and shipping costs are not affected by failure rate
+        const finalPackagingCost = totalPackagingCost;
+        const finalShippingCost = totalShippingCost;
         
         console.log('Final costs after all calculations:', {
             material: finalMaterialCost,
@@ -843,6 +1357,62 @@ function calculateCosts(e) {
         
     } catch (error) {
         console.error('Error calculating costs:', error);
+    }
+}
+
+// Update the UI with calculated results
+function updateResults(materialCost = 0, electricityCost = 0, laborCost = 0, packagingCost = 0, shippingCost = 0) {
+    try {
+        // Format number with 2 decimal places
+        const formatNumber = (num) => {
+            return Number(num).toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        };
+
+        // Update material cost display
+        const materialCostEl = document.getElementById('material-cost');
+        if (materialCostEl) {
+            materialCostEl.textContent = `€${formatNumber(materialCost)}`;
+        }
+
+        // Update electricity cost display
+        const electricityCostEl = document.getElementById('electricity-cost-result');
+        if (electricityCostEl) {
+            electricityCostEl.textContent = `€${formatNumber(electricityCost)}`;
+        }
+
+        // Update labor cost display
+        const laborCostEl = document.getElementById('labor-cost-result');
+        if (laborCostEl) {
+            laborCostEl.textContent = `€${formatNumber(laborCost)}`;
+        }
+
+        // Update packaging cost display
+        const packagingCostEl = document.getElementById('packaging-cost-result');
+        if (packagingCostEl) {
+            packagingCostEl.textContent = `€${formatNumber(packagingCost)}`;
+        }
+
+        // Update shipping cost display
+        const shippingCostEl = document.getElementById('shipping-cost-result');
+        if (shippingCostEl) {
+            shippingCostEl.textContent = `€${formatNumber(shippingCost)}`;
+        }
+
+        // Calculate and update base cost (sum of all costs before margin)
+        const baseCost = materialCost + electricityCost + laborCost + packagingCost + shippingCost;
+        const baseCostEl = document.getElementById('base-cost');
+        if (baseCostEl) {
+            baseCostEl.textContent = `€${formatNumber(baseCost)}`;
+        }
+
+        // Update the total cost with the current pricing option
+        updateTotalCost();
+
+    } catch (error) {
+        console.error('Error updating results:', error);
     }
 }
 
@@ -1079,6 +1649,12 @@ function updateCostAllocationChart(materialCost = 0, electricityCost = 0, laborC
 
         // Create new chart instance
         window.costAllocationChart = new Chart(ctx, config);
+        
+        // Update the total cost display
+        const totalCostEl = document.getElementById('total-cost');
+        if (totalCostEl) {
+            totalCostEl.textContent = formatCurrency(totalWithMargin);
+        }
     } catch (error) {
         console.error('Error initializing chart:', error);
         // If there's an error, clear the canvas and show an error message
@@ -1091,23 +1667,16 @@ function updateCostAllocationChart(materialCost = 0, electricityCost = 0, laborC
         }
     }
 
-    // Update the total cost display
-    const totalCostEl = document.getElementById('total-cost');
-    if (totalCostEl) {
-        totalCostEl.textContent = formatCurrency(totalWithMargin);
-    }
-}
-
 // Update suggested prices based on base cost
 function updateSuggestedPrices(baseCost) {
     if (isNaN(baseCost) || baseCost <= 0) return;
     
     const pricingOptions = [
-        { id: 'competitive', margin: 0.25 },
-        { id: 'standard', margin: 0.40 },
-        { id: 'premium', margin: 0.60 },
-        { id: 'luxury', margin: 0.80 },
-        { id: 'custom', margin: 0.25 } // Default custom margin, can be changed by user
+        { id: 'competitive', margin: 0.10 },  // 10%
+        { id: 'standard', margin: 0.15 },     // 15%
+        { id: 'urgent', margin: 0.25 },       // 25% (previously premium)
+        { id: 'crazy', margin: 0.50 },        // 50% (previously luxury)
+        { id: 'custom', margin: 0.25 }        // Default custom margin, can be changed by user
     ];
     
     pricingOptions.forEach(option => {
@@ -1124,60 +1693,80 @@ function updateSuggestedPrices(baseCost) {
 
 // Update total cost based on selected pricing option
 function updateTotalCost() {
-    const baseCostEl = document.getElementById('base-cost');
-    if (!baseCostEl) return;
-    
-    const baseCost = parseFloat(baseCostEl.textContent.replace(/[^0-9.,]/g, '').replace(',', '.')) || 0;
-    const selectedOption = document.querySelector('input[name="pricingOption"]:checked');
-    
-    if (!selectedOption) return;
-    
-    let total = 0;
-    let marginPercent = 0;
-    const optionId = selectedOption.id.replace('pricing-', '');
-    
-    if (optionId === 'custom') {
-        marginPercent = parseFloat(document.getElementById('custom-margin')?.value) || 0;
-        total = baseCost * (1 + (marginPercent / 100));
-    } else {
-        // Map option IDs to their corresponding margin percentages
-        const marginPercentages = {
-            'competitive': 25,
-            'standard': 40,
-            'premium': 60,
-            'luxury': 80
+    try {
+        // Get all individual costs
+        const getCost = (id) => {
+            const el = document.getElementById(id);
+            return el ? parseFloat(el.textContent.replace(/[^0-9.,]/g, '').replace(',', '.')) || 0 : 0;
         };
-        marginPercent = marginPercentages[optionId] || 0;
+        
+        // Get individual costs
+        const materialCost = getCost('material-cost');
+        const electricityCost = getCost('electricity-cost-result');
+        const laborCost = getCost('labor-cost-result');
+        const packagingCost = getCost('packaging-cost-result');
+        const shippingCost = getCost('shipping-cost-result');
+        
+        // Calculate base cost as sum of all individual costs
+        const baseCost = materialCost + electricityCost + laborCost + packagingCost + shippingCost;
+        
+        // Update the base cost display
+        const baseCostEl = document.getElementById('base-cost');
+        if (baseCostEl) {
+            baseCostEl.textContent = `€${baseCost.toFixed(2)}`;
+        }
+        
+        // Get selected pricing option
+        const selectedOption = document.querySelector('input[name="pricingOption"]:checked');
+        if (!selectedOption) return;
+        
+        let total = 0;
+        let marginPercent = 0;
+        const optionId = selectedOption.id.replace('pricing-', '');
+        
+        // Calculate margin based on selected option
+        if (optionId === 'custom') {
+            const customMarginInput = document.getElementById('custom-margin');
+            marginPercent = customMarginInput ? parseFloat(customMarginInput.value) || 0 : 0;
+        } else {
+            // Map option IDs to their corresponding margin percentages
+            const marginPercentages = {
+                'competitive': 10,  // 10%
+                'standard': 15,     // 15%
+                'urgent': 25,       // 25%
+                'crazy': 50         // 50%
+            };
+            marginPercent = marginPercentages[optionId] || 0;
+        }
+        
+        // Calculate total with margin
         total = baseCost * (1 + (marginPercent / 100));
+        
+        // Update the total cost display
+        const totalCostElement = document.getElementById('total-cost');
+        if (totalCostElement) {
+            totalCostElement.textContent = `€${total.toFixed(2)}`;
+            
+            // Update the margin percentage display if it exists
+            const marginDisplay = document.getElementById('margin-percentage');
+            if (marginDisplay) {
+                marginDisplay.textContent = `${marginPercent}%`;
+            }
+        }
+        
+        // Update the chart with the new margin
+        updateCostAllocationChart(
+            materialCost,
+            electricityCost,
+            laborCost,
+            packagingCost,
+            shippingCost,
+            marginPercent
+        );
+        
+    } catch (error) {
+        console.error('Error in updateTotalCost:', error);
     }
-    
-    // Update the total cost display
-    const totalCostElement = document.getElementById('total-cost');
-    if (totalCostElement) {
-        totalCostElement.textContent = `€${total.toFixed(2)}`;
-    }
-    
-    // Get current costs from the results display
-    const getCost = (id) => {
-        const el = document.getElementById(id);
-        return el ? parseFloat(el.textContent.replace(/[^0-9.,]/g, '').replace(',', '.')) || 0 : 0;
-    };
-    
-    const materialCost = getCost('material-cost');
-    const electricityCost = getCost('electricity-cost-result');
-    const laborCost = getCost('labor-cost-result');
-    const packagingCost = getCost('packaging-cost-result');
-    const shippingCost = getCost('shipping-cost-result');
-    
-    // Update the chart with the new margin
-    updateCostAllocationChart(
-        materialCost,
-        electricityCost,
-        laborCost,
-        packagingCost,
-        shippingCost,
-        marginPercent
-    );
 }
 
 // Update the results in the UI
@@ -1193,8 +1782,18 @@ function updateResults(materialCost = 0, electricityCost = 0, laborCost = 0, pac
 
     // Calculate base cost (sum of material, electricity, labor, packaging, and shipping costs)
     // These values already include quantity and failure rate multipliers
+    // Calculate base cost (sum of all costs without margin)
     const baseCost = materialCost + electricityCost + laborCost + packagingCost + shippingCost;
     window.currentBaseCost = baseCost; // Store for pricing calculations
+    
+    console.log('Base cost components:', {
+        materialCost,
+        electricityCost,
+        laborCost,
+        packagingCost,
+        shippingCost,
+        totalBaseCost: baseCost
+    });
 
     console.log('Base cost calculated:', {
         materialCost,
@@ -1232,8 +1831,8 @@ function updateResults(materialCost = 0, electricityCost = 0, laborCost = 0, pac
     if (packagingCostEl) packagingCostEl.textContent = `€${formatNumber(packagingCost)}`;
     if (shippingCostEl) shippingCostEl.textContent = `€${formatNumber(shippingCost)}`;
 
-    // Update the cost allocation chart with the latest values
-    updateCostAllocationChart(materialCost, electricityCost, laborCost, packagingCost, shippingCost);
+    // Update the cost allocation chart with the latest values (without margin)
+    updateCostAllocationChart(materialCost, electricityCost, laborCost, packagingCost, shippingCost, 0);
 
     // Update the suggested prices based on the new base cost
     updateSuggestedPrices(baseCost);
@@ -1252,74 +1851,408 @@ function updateResults(materialCost = 0, electricityCost = 0, laborCost = 0, pac
 
 // Export results as PDF
 function exportToPdf() {
-    const element = document.querySelector('.results-card');
-    const opt = {
-        margin: 10,
-        filename: '3d-printing-cost-calculator.pdf',
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { 
-            scale: 2,
-            useCORS: true,
-            logging: true,
-            allowTaint: true
-        },
-        jsPDF: { 
-            unit: 'mm', 
-            format: 'a4', 
-            orientation: 'portrait' 
-        }
-    };
-
-    try {
-        // Show loading state
-        const originalText = exportPdfBtn.innerHTML;
+    // Get the export button and store its state
+    const exportPdfBtn = document.getElementById('export-pdf-btn');
+    const originalText = exportPdfBtn ? exportPdfBtn.innerHTML : 'Export PDF';
+    
+    // Show loading state if button exists
+    if (exportPdfBtn) {
         exportPdfBtn.disabled = true;
         exportPdfBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Generating PDF...';
+    }
+    
+    try {
+
+        // Create a new element for PDF content with compact styling
+        const pdfContent = document.createElement('div');
+        pdfContent.id = 'pdf-content';
+        pdfContent.style.fontFamily = '"Roboto", "Helvetica", "Arial", sans-serif';
+        pdfContent.style.width = '190mm'; // Slightly less than A4 width to account for margins
+        pdfContent.style.margin = '5mm auto 5mm 10mm'; // More left margin to match right side
+        pdfContent.style.padding = '8mm 8mm 8mm 0';
+        pdfContent.style.color = '#424242';
+        pdfContent.style.backgroundColor = '#ffffff';
+        pdfContent.style.boxSizing = 'border-box';
+        pdfContent.style.fontSize = '10pt'; // Smaller base font size
+        
+        // Get current date for the invoice
+        const now = new Date();
+        const formattedDate = now.toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'short', 
+            day: 'numeric' 
+        });
+        
+        // Add compact header
+        const header = document.createElement('div');
+        header.style.backgroundColor = '#3f51b5';
+        header.style.color = 'white';
+        header.style.padding = '12px 16px';
+        header.style.borderRadius = '2px';
+        header.style.marginBottom = '12px';
+        header.style.display = 'flex';
+        header.style.justifyContent = 'space-between';
+        header.style.alignItems = 'center';
+        
+        const logoSection = document.createElement('div');
+        logoSection.innerHTML = `
+            <h1 style="color: white; margin: 0; font-size: 18px; font-weight: 500; letter-spacing: 0.5px;">${companyName || '3D Printing'}</h1>
+            <p style="margin: 2px 0 0 0; color: rgba(255,255,255,0.9); font-size: 11px; font-weight: 400;">3D Printing Cost Estimate</p>
+        `;
+        
+        const invoiceInfo = document.createElement('div');
+        invoiceInfo.style.textAlign = 'right';
+        invoiceInfo.innerHTML = `
+            <div style="background: rgba(255,255,255,0.1); display: inline-block; padding: 6px 10px; border-radius: 3px;">
+                <p style="margin: 0 0 2px 0; font-weight: 500; font-size: 10px; color: rgba(255,255,255,0.9);">EST #${currentEstimateNumber}</p>
+                <p style="margin: 0; color: rgba(255,255,255,0.8); font-size: 10px;">${formattedDate}</p>
+            </div>
+        `;
+        
+        header.appendChild(logoSection);
+        header.appendChild(invoiceInfo);
+        pdfContent.appendChild(header);
+        
+        // Compact project info section
+        const infoSection = document.createElement('div');
+        infoSection.style.backgroundColor = '#f8f9fa';
+        infoSection.style.borderRadius = '2px';
+        infoSection.style.padding = '12px 16px';
+        infoSection.style.marginBottom = '12px';
+        infoSection.style.borderLeft = '3px solid #3f51b5';
+        
+        const projectInfo = document.createElement('div');
+        projectInfo.innerHTML = `
+            <h3 style="color: #3f51b5; margin: 0 0 10px 0; font-size: 14px; font-weight: 500; display: flex; align-items: center;">
+                <span style="display: inline-block; width: 6px; height: 6px; background: #3f51b5; border-radius: 50%; margin-right: 6px;"></span>
+                PROJECT DETAILS
+            </h3>
+            <div style="display: flex; gap: 24px; font-size: 11px;">
+                <div>
+                    <p style="margin: 0 0 2px 0; color: #757575;">Print Time</p>
+                    <p style="margin: 0 0 8px 0; font-weight: 500;">${printTimeInput ? printTimeInput.value : '0'} hours</p>
+                </div>
+                <div>
+                    <p style="margin: 0 0 2px 0; color: #757575;">Quantity</p>
+                    <p style="margin: 0 0 8px 0; font-weight: 500;">${quantityInput ? quantityInput.value : '1'}</p>
+                </div>
+            </div>
+        `;
+        
+        infoSection.appendChild(projectInfo);
+        pdfContent.appendChild(infoSection);
+        
+        // Compact materials section
+        const materialsSection = document.createElement('div');
+        materialsSection.style.marginBottom = '12px';
+        
+        let materialsTable = `
+            <h3 style="color: #3f51b5; margin: 0 0 10px 0; font-size: 14px; font-weight: 500; display: flex; align-items: center;">
+                <span style="display: inline-block; width: 6px; height: 6px; background: #3f51b5; border-radius: 50%; margin-right: 6px;"></span>
+                MATERIALS
+            </h3>
+            <div style="overflow-x: auto; font-size: 10px;">
+                <table style="width: 100%; border-collapse: collapse; border: 1px solid #e0e0e0;">
+                    <thead>
+                        <tr>
+                            <th style="text-align: left; padding: 8px 10px; color: #757575; font-weight: 500; border-bottom: 1px solid #e0e0e0; background: #f5f5f5;">MATERIAL</th>
+                            <th style="text-align: left; padding: 8px 10px; color: #757575; font-weight: 500; border-bottom: 1px solid #e0e0e0; background: #f5f5f5;">COLOR</th>
+                            <th style="text-align: right; padding: 8px 10px; color: #757575; font-weight: 500; border-bottom: 1px solid #e0e0e0; background: #f5f5f5;">WEIGHT</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        const materialRows = document.querySelectorAll('.material-row');
+        materialRows.forEach(row => {
+            const materialSelect = row.querySelector('select.material-select');
+            const materialOption = materialSelect && materialSelect.selectedIndex >= 0 ? 
+                materialSelect.options[materialSelect.selectedIndex] : null;
+            const materialName = materialOption ? materialOption.text.split('(')[0].trim() : 'PLA';
+            const materialColor = materialOption && materialOption.dataset.color ? 
+                materialOption.dataset.color : '#CCCCCC';
+            const materialWeight = row.querySelector('.material-weight') ? 
+                (parseFloat(row.querySelector('.material-weight').value) || 0).toFixed(2) : '0.00';
+            const materialUnit = row.querySelector('.material-unit') ? 
+                row.querySelector('.material-unit').textContent : 'g';
+            const quantity = parseFloat(quantityInput ? quantityInput.value : 1) || 1;
+            const totalWeight = (parseFloat(materialWeight) * quantity).toFixed(2);
+            
+            materialsTable += `
+                <tr>
+                    <td style="padding: 8px 10px; border-bottom: 1px solid #f0f0f0; vertical-align: top; font-size: 10px;">
+                        ${materialName}
+                    </td>
+                    <td style="padding: 8px 10px; border-bottom: 1px solid #f0f0f0; vertical-align: top;">
+                        <div style="width: 16px; height: 16px; border-radius: 2px; background-color: ${materialColor}; border: 1px solid #ddd;"></div>
+                    </td>
+                    <td style="padding: 8px 10px; border-bottom: 1px solid #f0f0f0; text-align: right; vertical-align: top; font-size: 10px; font-family: monospace;">
+                        ${materialWeight} ${materialUnit} × ${quantity} = <strong>${totalWeight} ${materialUnit}</strong>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        materialsTable += `
+                </tbody>
+            </table>
+        `;
+        
+        materialsSection.innerHTML = materialsTable;
+        pdfContent.appendChild(materialsSection);
+        
+        // Compact costs section
+        const costsSection = document.createElement('div');
+        costsSection.style.marginBottom = '12px';
+        
+        const laborType = laborCalculationType ? laborCalculationType.options[laborCalculationType.selectedIndex].text : 'N/A';
+        const packagingType = packagingCalculationType ? packagingCalculationType.options[packagingCalculationType.selectedIndex].text : 'N/A';
+        const shippingType = shippingCalculationType ? shippingCalculationType.options[shippingCalculationType.selectedIndex].text : 'N/A';
+        
+        // Calculate per-unit costs
+        const quantity = parseFloat(quantityInput ? quantityInput.value : 1) || 1;
+        const laborHours = parseFloat(laborHoursInput ? laborHoursInput.value : 0) || 0;
+        const packagingCost = parseFloat(packagingCostInput ? packagingCostInput.value : 0) || 0;
+        const shippingCost = parseFloat(shippingCostInput ? shippingCostInput.value : 0) || 0;
+        
+        costsSection.innerHTML = `
+            <h3 style="color: #3f51b5; margin: 0 0 10px 0; font-size: 14px; font-weight: 500; display: flex; align-items: center;">
+                <span style="display: inline-block; width: 6px; height: 6px; background: #3f51b5; border-radius: 50%; margin-right: 6px;"></span>
+                COST BREAKDOWN
+            </h3>
+            <div style="overflow-x: auto; font-size: 10px;">
+                <table style="width: 100%; border-collapse: collapse; border: 1px solid #e0e0e0; margin-bottom: 8px;">
+                    <thead>
+                        <tr>
+                            <th style="text-align: left; padding: 8px 10px; color: #757575; font-weight: 500; border-bottom: 1px solid #e0e0e0; background: #f5f5f5;">ITEM</th>
+                            <th style="text-align: right; padding: 8px 10px; color: #757575; font-weight: 500; border-bottom: 1px solid #e0e0e0; background: #f5f5f5;">UNIT PRICE</th>
+                            <th style="text-align: right; padding: 8px 10px; color: #757575; font-weight: 500; border-bottom: 1px solid #e0e0e0; background: #f5f5f5;">QTY</th>
+                            <th style="text-align: right; padding: 8px 10px; color: #757575; font-weight: 500; border-bottom: 1px solid #e0e0e0; background: #f5f5f5;">TOTAL</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style="padding: 8px 10px; border-bottom: 1px solid #f0f0f0; vertical-align: top;">
+                                <div style="font-weight: 500;">Labor</div>
+                                <div style="color: #757575; font-size: 9px;">${laborType}</div>
+                            </td>
+                            <td style="padding: 8px 10px; border-bottom: 1px solid #f0f0f0; text-align: right; vertical-align: top; font-family: monospace;">
+                                ${(laborHours / quantity).toFixed(2)} h
+                            </td>
+                            <td style="padding: 8px 10px; border-bottom: 1px solid #f0f0f0; text-align: right; vertical-align: top; font-family: monospace;">
+                                ${quantity}
+                            </td>
+                            <td style="padding: 8px 10px; border-bottom: 1px solid #f0f0f0; text-align: right; vertical-align: top; font-family: monospace;">
+                                <strong>${laborHours.toFixed(2)} h</strong>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px 10px; border-bottom: 1px solid #f0f0f0; vertical-align: top;">
+                                <div style="font-weight: 500;">Packaging</div>
+                                <div style="color: #757575; font-size: 9px;">${packagingType}</div>
+                            </td>
+                            <td style="padding: 8px 10px; border-bottom: 1px solid #f0f0f0; text-align: right; vertical-align: top; font-family: monospace;">
+                                ${(packagingCost / quantity).toFixed(2)} €
+                            </td>
+                            <td style="padding: 8px 10px; border-bottom: 1px solid #f0f0f0; text-align: right; vertical-align: top; font-family: monospace;">
+                                ${quantity}
+                            </td>
+                            <td style="padding: 8px 10px; border-bottom: 1px solid #f0f0f0; text-align: right; vertical-align: top; font-family: monospace;">
+                                <strong>${packagingCost.toFixed(2)} €</strong>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px 10px; border-bottom: 1px solid #f0f0f0; vertical-align: top;">
+                                <div style="font-weight: 500;">Shipping</div>
+                                <div style="color: #757575; font-size: 9px;">${shippingType}</div>
+                            </td>
+                            <td style="padding: 8px 10px; border-bottom: 1px solid #f0f0f0; text-align: right; vertical-align: top; font-family: monospace;">
+                                ${(shippingCost / quantity).toFixed(2)} €
+                            </td>
+                            <td style="padding: 8px 10px; border-bottom: 1px solid #f0f0f0; text-align: right; vertical-align: top; font-family: monospace;">
+                                ${quantity}
+                            </td>
+                            <td style="padding: 8px 10px; border-bottom: 1px solid #f0f0f0; text-align: right; vertical-align: top; font-family: monospace;">
+                                <strong>${shippingCost.toFixed(2)} €</strong>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        `;
+        pdfContent.appendChild(costsSection);
+        
+        // Add compact total amount
+        const totalCostEl = document.getElementById('total-cost');
+        if (totalCostEl) {
+            const totalSection = document.createElement('div');
+            totalSection.style.backgroundColor = '#f8f9fa';
+            totalSection.style.borderRadius = '2px';
+            totalSection.style.padding = '12px 16px';
+            totalSection.style.marginTop = '8px';
+            totalSection.style.textAlign = 'right';
+            totalSection.style.borderTop = '2px solid #3f51b5';
+            
+            totalSection.innerHTML = `
+                <div style="font-size: 11px; color: #757575; margin-bottom: 2px;">TOTAL AMOUNT</div>
+                <div style="font-size: 20px; font-weight: 600; color: #3f51b5; font-family: monospace;">${totalCostEl.textContent}</div>
+                <div style="font-size: 9px; color: #9e9e9e; margin-top: 2px;">
+                    (${quantity} ${quantity === 1 ? 'piece' : 'pieces'})
+                </div>
+            `;
+            pdfContent.appendChild(totalSection);
+        }
+        
+        // Add compact footer
+        const footer = document.createElement('div');
+        footer.style.textAlign = 'center';
+        footer.style.marginTop = '16px';
+        footer.style.padding = '8px 0';
+        footer.style.color = '#9e9e9e';
+        footer.style.fontSize = '9px';
+        footer.style.borderTop = '1px solid #f0f0f0';
+        footer.innerHTML = `
+            <div style="margin: 0 auto; padding: 0 8px;">
+                <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 4px;">
+                    <span style="color: #3f51b5; font-weight: 500; font-size: 10px;">3Dwork</span>
+                    <span style="margin: 0 4px; color: #e0e0e0;">•</span>
+                    <span style="font-size: 9px;">3D Cost Calculator</span>
+                </div>
+                <p style="margin: 0; color: #bdbdbd; font-size: 8px;">
+                    <a href="https://3dwork.io" style="color: #3f51b5; text-decoration: none;">https://3dwork.io</a>
+                </p>
+                <p style="margin: 4px 0 0 0; color: #e0e0e0; font-size: 8px;">
+                    Computer-generated document. No signature required.
+                </p>
+            </div>
+        `;
+        pdfContent.appendChild(footer);
+        
+        // Temporarily add to body for PDF generation
+        document.body.appendChild(pdfContent);
+        
+        // Optimized PDF options for compact layout
+        const opt = {
+            margin: [5, 5, 5, 10], // Right margin increased to match left side
+            filename: `3dwork-estimate-${currentEstimateNumber || new Date().getTime()}.pdf`,
+            pagebreak: { 
+                mode: ['avoid-all', 'css', 'legacy'],
+                before: '.avoid-break',
+                after: '.avoid-break'
+            },
+            image: { 
+                type: 'jpeg', 
+                quality: 0.9 
+            },
+            html2canvas: { 
+                scale: 1.2, // Optimized scale for better fit
+                useCORS: true,
+                logging: false,
+                allowTaint: true,
+                backgroundColor: '#ffffff',
+                letterRendering: true,
+                scrollX: 0,
+                scrollY: 0
+            },
+            jsPDF: { 
+                unit: 'mm', 
+                format: 'a4',
+                orientation: 'portrait',
+                hotfixes: ['px_scaling'],
+                putOnlyUsedFonts: true,
+                precision: 2 // Reduce precision to save space if needed
+            },
+            onclone: function(clonedDoc) {
+                // Force single page
+                clonedDoc.body.style.overflow = 'hidden';
+                const content = clonedDoc.getElementById('pdf-content');
+                if (content) {
+                    content.style.maxHeight = '287mm'; // A4 height - minimal margins
+                    content.style.overflow = 'hidden';
+                }
+                
+                // Add page break prevention classes
+                const sections = clonedDoc.querySelectorAll('div > div');
+                sections.forEach((section, index) => {
+                    if (index > 0) {
+                        section.classList.add('avoid-break');
+                    }
+                });
+            }
+        };
 
         // Generate PDF
         html2pdf()
             .set(opt)
-            .from(element)
+            .from(pdfContent)
             .save()
             .then(() => {
-                // Restore button state
-                exportPdfBtn.disabled = false;
-                exportPdfBtn.innerHTML = originalText;
+                // Clean up
+                document.body.removeChild(pdfContent);
+                
+                // Restore button state if button exists
+                if (exportPdfBtn) {
+                    exportPdfBtn.disabled = false;
+                    exportPdfBtn.innerHTML = originalText;
+                }
                 
                 // Show success message
                 const alert = document.createElement('div');
                 alert.className = 'alert alert-success mt-3';
                 alert.role = 'alert';
                 alert.innerHTML = 'PDF generated successfully!';
-                element.parentNode.insertBefore(alert, element.nextSibling);
+                document.querySelector('.results-card').parentNode.insertBefore(alert, document.querySelector('.results-card').nextSibling);
                 
                 // Remove alert after 3 seconds
                 setTimeout(() => alert.remove(), 3000);
             })
             .catch(err => {
                 console.error('Error generating PDF:', err);
-                handlePdfError(originalText, element, 'Error generating PDF. Please try again.');
+                handlePdfError(originalText, exportPdfBtn, 'Error generating PDF. Please try again.');
             });
+            
+        // Return the promise for better error handling
+        return true;
     } catch (err) {
         console.error('Unexpected error in exportToPdf:', err);
-        handlePdfError('Export PDF', element, 'An unexpected error occurred. Please check the console for details.');
+        const btnText = exportPdfBtn ? exportPdfBtn.textContent : 'Export PDF';
+        handlePdfError(btnText, exportPdfBtn, 'An unexpected error occurred. Please check the console for details.');
     }
 }
 
-function handlePdfError(originalText, element, message) {
-    // Restore button state
-    if (exportPdfBtn) {
-        exportPdfBtn.disabled = false;
-        exportPdfBtn.innerHTML = originalText;
+function handlePdfError(originalText, buttonElement, message) {
+    // Restore button state if button element exists
+    if (buttonElement) {
+        buttonElement.disabled = false;
+        buttonElement.innerHTML = originalText || 'Export PDF';
     }
     
-    // Show error message
-    const alert = document.createElement('div');
-    alert.className = 'alert alert-danger mt-3';
-    alert.role = 'alert';
-    alert.innerHTML = message;
-    element.parentNode.insertBefore(alert, element.nextSibling);
-    
-    // Remove alert after 5 seconds
-    setTimeout(() => alert.remove(), 5000);
-}
+    try {
+        // Show error message
+        const alert = document.createElement('div');
+        alert.className = 'alert alert-danger mt-3';
+        alert.role = 'alert';
+        alert.innerHTML = message;
+        
+        // Try to find a good place to insert the alert
+        const resultsCard = document.querySelector('.results-card');
+        if (resultsCard && resultsCard.parentNode) {
+            resultsCard.parentNode.insertBefore(alert, resultsCard.nextSibling);
+        } else if (buttonElement && buttonElement.parentNode) {
+            buttonElement.parentNode.insertBefore(alert, buttonElement.nextSibling);
+        } else {
+            document.body.insertBefore(alert, document.body.firstChild);
+        }
+        
+        // Remove alert after 5 seconds
+        setTimeout(() => {
+            if (alert && alert.parentNode) {
+                alert.parentNode.removeChild(alert);
+            }
+        }, 5000);
+    } catch (err) {
+        console.error('Error showing error message:', err);
+        // Fallback to alert if DOM manipulation fails
+        alert(message);
+    }
+}}

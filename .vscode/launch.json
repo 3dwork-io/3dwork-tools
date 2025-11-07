@@ -1,0 +1,15 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "chrome",
+            "request": "launch",
+            "name": "Open HTML in Chrome",
+            "file": "${workspaceFolder}/3dcalculator/index.html",
+            "webRoot": "${workspaceFolder}",
+            "sourceMaps": true,
+            "runtimeArgs": [
+                "--auto-open-devtools-for-tabs"
+            ]
+        }
+}
