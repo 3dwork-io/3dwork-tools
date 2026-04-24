@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3Dwork - 3D Printing Calibration tools</title>
+    <!-- Anti-cache meta tags -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <link rel="icon" type="image/png"
+        href="https://3dwork.io/wp-content/uploads/2025/09/cropped-image-removebg-preview-2-32x32.png">
+    <link rel="stylesheet" href="src/style.css?v=1.1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-M7L3H21XS2"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+
+        gtag('config', 'G-M7L3H21XS2');
+    </script>
+</head>
+
+<body>
+    <header>
+        <nav id="top-nav">
+            <a href="https://3dwork.io/" class="logo-container">
+                <img src="https://3dwork.io/wp-content/uploads/2023/07/3dwork_white_logo.png" alt="3Dwork Logo"
+                    class="logo-img">
+            </a>
+            <ul class="nav-links">
+                <li><a href="#" id="nav-home">Home</a></li>
+                <li class="dropdown">
+                    <a href="#" id="nav-calibration-menu" class="dropdown-trigger">3D Calibration <i
+                            data-lucide="chevron-down"></i></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="#esteps" id="nav-esteps">E-steps Calibration</a></li>
+                        <li><a href="#rotation" id="nav-rotation">Rotation Distance</a></li>
+                        <li><a href="#skew" id="nav-skew">Skew Calibration</a></li>
+                        <li><a href="#bedmesh" id="nav-bedmesh">Bed Mesh Alignment</a></li>
+                        <li><a href="#bedleveling" id="nav-bedleveling">Manual Bed Leveling</a></li>
+                        <li><a href="#vref" id="nav-vref">Vref & RMS Calculator</a></li>
+                        <li><a href="#shaper" id="nav-shaper">Input Shaper Analysis</a></li>
+                        <li><a href="#loganalyzer" id="nav-loganalyzer">Log Analyzer & AI Support</a></li>
+                    </ul>
+                </li>
+                <li class="dropdown">
+                    <a href="#" id="nav-create-menu" class="dropdown-trigger">3D Create <i
+                            data-lucide="chevron-down"></i></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="#lithophane" id="nav-lithophane">Lithophane Creator</a></li>
+                        <li><a href="#hueforge" id="nav-hueforge">HueForge Creator</a></li>
+                    </ul>
+                </li>
+                <li><a href="#price" id="nav-price">3D Price Calculator</a></li>
+                <li><a href="#comparator" id="nav-comparator">Comparator</a></li>
+                <li><a href="#filaments" id="nav-filaments">Filaments</a></li>
+            </ul>
+            <div class="lang-switch">
+                <button id="btn-en" class="active">🇬🇧 EN</button>
+                <button id="btn-es">🇪🇸 ES</button>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <div id="content"></div>
+    </main>
+
+    <footer>
+        <p id="footer-contact"
+            style="font-size: 0.9em; margin-bottom: 0.5rem; display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <i data-lucide="info" style="width: 16px; height: 16px;"></i>
+            <span id="footer-contact-text"></span>
+        </p>
+        <p>&copy; 2026 3Dwork.io - All Rights Reserved</p>
+    </footer>
+
+    <!-- Scripts included in order to avoid module issues over file:// -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="src/components/geminiWidget.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.renderGeminiWidget) {
+                renderGeminiWidget();
+            }
+
+            // Set the mascot logo
+            window.setMascotLogo('./src/assets/mascot.png');
+        });
+    </script>
+    <script src="src/i18n.js"></script>
+    <script src="src/components/home.js?v=1.1"></script>
+    <script src="src/components/esteps.js?v=1.1"></script>
+    <script src="src/components/rotation.js?v=1.1"></script>
+    <script src="src/components/skew.js?v=1.1"></script>
+    <script src="src/components/bedMesh.js?v=1.1"></script>
+    <script src="src/components/bedLeveling.js?v=1.1"></script>
+    <script src="src/components/vref.js?v=1.1"></script>
+    <script src="src/components/shaper.js?v=1.1"></script>
+    <script src="src/assets/demoData.js?v=1.1"></script>
+    <script src="src/components/logAnalyzer.js?v=1.1"></script>
+    <script src="src/components/priceCalculator.js?v=1.1"></script>
+    <script src="src/components/comparator.js?v=2.3"></script>
+    <script src="src/components/filamentComparator.js?v=1.6"></script>
+    <script src="src/main.js?v=1.1"></script>
+</body>
+
+</html>
